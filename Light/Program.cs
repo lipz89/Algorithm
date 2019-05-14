@@ -7,12 +7,15 @@ using System.Linq;
 
 namespace Light
 {
+    /// <summary>
+    /// 九宝莲灯
+    /// </summary>
     class Program
     {
         static void Main(string[] args)
         {
             //Test(4, 4, 1);
-            for (int i = 3; i <= 15; i++)
+            for (int i = 3; i <= 10; i++)
             {
                 for (int j = 3; j <= i; j++)
                 {

@@ -9,7 +9,7 @@ namespace HorseCore
         private readonly Map map;
         private readonly Point start;
 
-        public Solver2(int width, int height, int _x = 1, int _y = 1)
+        public Solver2(int width, int height, int _x = 0, int _y = 0)
         {
             if (width < 3 || height < 3)
             {
@@ -21,8 +21,8 @@ namespace HorseCore
                 throw new Exception("指定起点不在棋盘内！");
             }
 
-            this.x = _x - 1;
-            this.y = _y - 1;
+            this.x = _x ;
+            this.y = _y ;
             this.W = width;
             this.H = height;
             this.map = new Map(W, H);

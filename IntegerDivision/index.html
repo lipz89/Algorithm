@@ -1,0 +1,28 @@
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+    输入要划分的整数：<input id='txtTarget'>
+    <input type='button' value="计算划分数" onclick="calc()">
+    <label id="result"></label>
+    <script>
+        function calc() {
+            var txt = document.getElementById("txtTarget").value;
+            var val = parseInt(txt);
+            if (val && val > 0) {
+                var cnt = count(val, val);
+                document.getElementById("result").innerHTML = "划分数：" + cnt;
+            }
+        }
+        function count(n, m) {
+            if (n === 1 || m === 1)
+                return 1;
+            if (n <= m)
+                return 1 + count(n, n - 1);
+
+            return count(n, m - 1) + count(n - m, m);
+        }
+    </script>
+</body>
+</html>

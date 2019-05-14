@@ -9,49 +9,19 @@ using System.Threading.Tasks;
 
 namespace HorseCore
 {
+    /// <summary>
+    /// 马踏棋盘
+    /// </summary>
     class Program
     {
-        class Dif
-        {
-            public Dif(int width, int height, int x, int y)
-            {
-                Width = width;
-                Height = height;
-                X = x;
-                Y = y;
-            }
-            public Dif(int width, int height)
-            {
-                Width = width;
-                Height = height;
-                X = 0;
-                Y = 0;
-                Around = true;
-            }
-            public int Width { get; }
-            public int Height { get; }
-            public int X { get; }
-            public int Y { get; }
-            public bool Around { get; }
-            public override string ToString()
-            {
-                if (Around)
-                {
-                    return $"环游解：棋盘({Width}*{Height})在起点({X + 1},{Y + 1})  耗时超过 1 秒钟";
-                }
-                else
-                {
-                    return $"单独解：棋盘({Width}*{Height})在起点({X + 1},{Y + 1})  耗时超过 1 秒钟";
-                }
-            }
-        }
         static void Main()
         {
             //TestSimple(11, 6, 2, 1);
             //RunSingle(11, 6, 5, 2, true, $"solvers/horse-single-11-6.txt");
             try
             {
-                Task.Run(() => Run(19, 30, true)).Wait();
+                Run(10, 30, true);
+                //Task.Run(() => Run(10, 30, true)).Wait();
             }
             catch (Exception e)
             {
@@ -102,7 +72,7 @@ namespace HorseCore
             //new Dif(){Width = 22,Height = 14,X = 8,Y = 2},
         };
 
-        private static void TestSimple(int width, int height, int _x = 1, int _y = 1)
+        private static void TestSimple(int width, int height, int _x = 0, int _y = 0)
         {
             var solver = new Solver2(width, height, _x, _y);
             var timer = Stopwatch.StartNew();
@@ -143,7 +113,7 @@ namespace HorseCore
             Console.WriteLine("共计耗时：" + timer.Elapsed.ToString("g"));
         }
 
-        static async Task Run(int min, int max, bool single)
+        static void Run(int min, int max, bool single)
         {
             for (int width = min; width <= max; width++)
             {
@@ -154,14 +124,14 @@ namespace HorseCore
                     {
                         File.Delete(file);
                     }
-                    Console.Clear();
-                    await RunAround(width, height, single, file);
-                    await RunAll(width, height, single, file);
+                    //Console.Clear();
+                    // RunAround(width, height, single, file);
+                    RunAll(width, height, single, file);
                 }
             }
         }
 
-        private static async Task RunAll(int width, int height, bool single, string file)
+        private static void RunAll(int width, int height, bool single, string file)
         {
             for (int _i = 0; _i < width / 2 + width % 2; _i++)
             {
@@ -169,29 +139,25 @@ namespace HorseCore
                 {
                     var i = _i;
                     var j = _j;
-                    var tokenSource = new CancellationTokenSource();
-                    var delay = Task.Run(() => Delay());
+                    var tokenSource = new CancellationTokenSource(100);
                     var run = Task.Run(() => RunSingle(width, height, i, j, single, file), tokenSource.Token);
-                    var rst = await Task.WhenAny(delay, run);
-                    if (rst == delay)
+                    run.ContinueWith(x =>
                     {
-                        tokenSource.Cancel();
-                        var dif = new Dif(width, height, _i, _j);
+                        var dif = new Dif(width, height, i, j);
                         skips.Add(dif);
 
                         Print(file, dif + "\r\n--------------------------\r\n");
-                    }
-                    //var con = false;
-                    //foreach (var skip in skips)
+                    }, TaskContinuationOptions.OnlyOnCanceled);
+                    //var delay = Task.Delay(100);
+                    //var rst = await Task.WhenAny(delay, run);
+                    //if (rst == delay)
                     //{
-                    //    if (width == skip.Width && height == skip.Height && _i == skip.X && _j == skip.Y)
-                    //    {
-                    //        con = true;
-                    //        break;
-                    //    }
+                    //    tokenSource.Cancel();
+                    //    var dif = new Dif(width, height, _i, _j);
+                    //    skips.Add(dif);
+
+                    //    Print(file, dif.ToString() /*+ "\r\n--------------------------\r\n"*/);
                     //}
-                    //if (con) continue;
-                    //RunSingle(width, height, _i, _j, single, file);
                 }
             }
         }
@@ -200,69 +166,76 @@ namespace HorseCore
         {
             var content = new StringBuilder();
 
-            var solver = new Solver2(width, height, _i + 1, _j + 1);
-            content.AppendLine($"棋盘({solver.W}*{solver.H}) 起点位置({solver.X},{solver.Y})");
+            var solver = new Solver2(width, height, _i , _j );
+            content.Append($"棋盘({solver.W}*{solver.H}) 起点位置({solver.X},{solver.Y})");
             Stopwatch stopwatch = Stopwatch.StartNew();
             var steps = solver.GetSteps(single ? 1 : int.MaxValue);
             stopwatch.Stop();
             if (steps == null)
             {
-                content.AppendLine("无解");
+                content.Append("\t\t无解");
             }
             else
             {
-                content.AppendLine($"访问节点数：{solver.NodeCount}");
-                if (!steps.Any())
-                {
-                    content.AppendLine("无解。");
-                }
-                else
-                {
-                    content.AppendLine($"共{steps.Length} 组解法");
-                    for (var index = 0; index < steps.Length; index++)
-                    {
-                        content.AppendLine($"第 {index + 1} 组解法：");
-                        var step = steps[index];
-                        var w = step.GetLength(0);
-                        var h = step.GetLength(1);
-
-                        for (int j = 0; j < h; j++)
-                        {
-                            for (int i = 0; i < w; i++)
-                            {
-                                content.Append(step[i, j].ToString().PadLeft(3, ' ') + " ");
-                            }
-
-                            content.AppendLine();
-                        }
-
-                        break;
-                    }
-                }
-
                 var time = stopwatch.Elapsed;
-                content.AppendLine("共计耗时：" + time.ToString("g"));
+                content.Append("\t\t共计耗时：" + time.ToString("g"));
+                //content.AppendLine($"访问节点数：{solver.NodeCount}");
+                //if (!steps.Any())
+                //{
+                //    content.AppendLine("无解。");
+                //}
+                //else
+                //{
+                //    content.AppendLine($"共{steps.Length} 组解法");
+                //    for (var index = 0; index < steps.Length; index++)
+                //    {
+                //        content.AppendLine($"第 {index + 1} 组解法：");
+                //        var step = steps[index];
+                //        var w = step.GetLength(0);
+                //        var h = step.GetLength(1);
+
+                //        for (int j = 0; j < h; j++)
+                //        {
+                //            for (int i = 0; i < w; i++)
+                //            {
+                //                content.Append(step[i, j].ToString().PadLeft(3, ' ') + " ");
+                //            }
+
+                //            content.AppendLine();
+                //        }
+
+                //        break;
+                //    }
+                //}
+
             }
 
-            content.AppendLine("-----------------------------------------------");
+            //content.AppendLine("-----------------------------------------------");
 
             Print(file, content.ToString());
         }
 
-        private static async Task RunAround(int width, int height, bool single, string file)
+        private static void RunAround(int width, int height, bool single, string file)
         {
-            var tokenSource = new CancellationTokenSource();
+            var tokenSource = new CancellationTokenSource(100);
             var delay = Task.Run(() => Delay());
             var run = Task.Run(() => RunAroundInner(width, height, single, file), tokenSource.Token);
-            var rst = await Task.WhenAny(delay, run);
-            if (rst == delay)
+            run.ContinueWith(x =>
             {
-                tokenSource.Cancel();
                 var dif = new Dif(width, height);
                 skips.Add(dif);
 
                 Print(file, dif + "\r\n--------------------------\r\n");
-            }
+            }, TaskContinuationOptions.OnlyOnCanceled);
+            //var rst = await Task.WhenAny(delay, run);
+            //if (rst == delay)
+            //{
+            //    tokenSource.Cancel();
+            //    var dif = new Dif(width, height);
+            //    skips.Add(dif);
+
+            //    Print(file, dif + "\r\n--------------------------\r\n");
+            //}
         }
 
         private static void RunAroundInner(int width, int height, bool single, string file)
@@ -336,10 +309,44 @@ namespace HorseCore
 
         private static void Print(string file, string content)
         {
-            lock (file)
+            //lock (file)
+            //{
+            Console.WriteLine(content);
+            //File.AppendAllText(file, content);
+            //}
+        }
+    }
+    class Dif
+    {
+        public Dif(int width, int height, int x, int y)
+        {
+            Width = width;
+            Height = height;
+            X = x;
+            Y = y;
+        }
+        public Dif(int width, int height)
+        {
+            Width = width;
+            Height = height;
+            X = 0;
+            Y = 0;
+            Around = true;
+        }
+        public int Width { get; }
+        public int Height { get; }
+        public int X { get; }
+        public int Y { get; }
+        public bool Around { get; }
+        public override string ToString()
+        {
+            if (Around)
             {
-                Console.WriteLine(content);
-                File.AppendAllText(file, content);
+                return $"环游解：棋盘({Width}*{Height})在起点({X + 1},{Y + 1})  耗时超过 1 秒钟";
+            }
+            else
+            {
+                return $"单独解：棋盘({Width}*{Height})在起点({X + 1},{Y + 1})  耗时超过 1 秒钟";
             }
         }
     }
